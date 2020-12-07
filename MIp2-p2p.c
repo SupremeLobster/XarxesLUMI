@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
     }
 
     while( strcmp("y", buff) == 0) {
-        inici:
         estatus = LLIURE;
         strcpy(ipTCPloc, "0.0.0.0");
         portTCPloc = 0;
@@ -80,6 +79,8 @@ int main(int argc, char *argv[]) {
                 perror(A_ObteMissError());
                 exit(-1);
         }
+
+        INICI:
 
         printf("[SYSTEM] Entra el nom d'usuari remot [user@domain] (max 99 caracters) [OPCIONAL]:\n");
 
@@ -96,10 +97,11 @@ int main(int argc, char *argv[]) {
         if(selected == 0) { // Entrem @MI remota per teclat i ens connectem. Ens comportarem com un client.
             if( DemanarDades(nomUsuariDominiRemot) == -1 ) {
                 printf("Error al llegir les dades\n");
+                exit(-1);
             }
 
             if((res = LUMIc_DemanaLocalitzacio(sckUDP, nomUsuariDominiLocal, nomUsuariDominiRemot, ipTCPrem, &portTCPrem, fitxLog)) != 0) {
-                printf("Error al demanar localitzció al servidor: ");
+                printf("Error al demanar localitzció al servidor:\n");
 
                 if(res == -1) printf("Error general\n");
                 else if(res == -2) printf("El node no ha respost\n");
@@ -107,8 +109,8 @@ int main(int argc, char *argv[]) {
                 else if(res == 2) printf("Usuari o domini no existeix\n");
                 else if(res == 3) printf("Usuari offline\n");
 
-                perror(LUMIc_ObteMissError());
-                goto inici;
+                if(res < 0) perror(LUMIc_ObteMissError());
+                goto INICI;
             }
 
             if( (scon = MI_DemanaConv(ipTCPrem, portTCPrem, ipTCPloc, &portTCPloc, nicknameL, nicknameR)) == -1 ) {
@@ -142,7 +144,6 @@ int main(int argc, char *argv[]) {
                     MI_AcabaConv(scon);
                     MI_AcabaEscPetiRemConv(sesc);
                     exit(-1);
-
                 }
                 
                 estatus = OCUPAT;
@@ -221,7 +222,7 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
     while( fi != 1) {
         // Select
         if( (selected = A_HaArribatAlgunaCosa(conjunt, N_SOCKETS)) == -1) {
-            //perror("Error en select");
+            perror("Error en select");
             //perror(A_MostraError());
             MI_AcabaConv(scon);
             exit(-1);
@@ -229,7 +230,7 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
 
         if(selected == 0) { // El teclat està “marcat”? han arribat dades al teclat?
             if( (bytes_llegits = read(0, buffer, sizeof(buffer))) == -1 ) {
-                //perror("Error en read");
+                perror("Error en read");
                 MI_AcabaConv(scon);
                 exit(-1);
             }
@@ -249,20 +250,20 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
                 FILE *fp;
                 
                 if( (fp = fopen(fileName, "r")) == NULL) {
-                    //perror("Error en llegir fitxer");
+                    perror("Error en llegir fitxer");
                     MI_AcabaConv(scon);
                     exit(-1);
                 }
 
                 if(MI_EnviaFitxer(scon, fp) == -1) {
-                    //perror("Error en llegir fitxer");
+                    perror("Error en llegir fitxer");
                     //perror(A_MostraError());
                     MI_AcabaConv(scon);
                     exit(-1);
                 }
             }
             else if( MI_EnviaLinia(scon, buffer, bytes_llegits-1) == -1 ) { // Envia linea. Enviem bytes_llegits-1 per no enviar el '\0'
-                //perror("Error envia");
+                perror("Error envia");
                 //perror(A_MostraError());
                 MI_AcabaConv(scon);
                 exit(-1);
@@ -274,7 +275,7 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
             int status;
             
             if( (status = MI_ServeixPeticio(scon, buffer, &sizeBuffer)) == -1) {
-                //perror("Error servir peticio");
+                perror("Error servir peticio");
                 //perror(A_MostraError());
                 MI_AcabaConv(scon);
                 exit(-1);
@@ -287,7 +288,7 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
             }
             else if(status == 1) {
                 if(printf("[%s]: %s\n", nicknameR, buffer) < 0) {
-                    //perror("Error en write");
+                    perror("Error en write");
                     MI_AcabaConv(scon);
                     exit(-1);
                 }
@@ -301,7 +302,7 @@ void IniciarConversa(int scon, int sckUDP, char *nicknameR) {
                 int mida = atoi(buffer);
 
                 if(MI_RepFitxer(scon, fileName, mida) == -1) {
-                    //perror("Error en rebre fitxer");
+                    perror("Error en rebre fitxer");
                     //perror(A_MostraError());
                     MI_AcabaConv(scon);
                 }

@@ -58,7 +58,7 @@ int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomDomini[100];
     char ipServer[16];
     char missatgeRegistre[102];
-    //int portUDPremot = DEFAULT_PORT; // Hard coded, s'ha de saber. Estipulem que es farà servir aquest port.
+    int len;
 
     sscanf(adrMI, "%[^@]@%s", nomUsuari, nomDomini);
 
@@ -66,7 +66,7 @@ int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
 
     UDP_DemanaConnexio(sckNodeLUMI, ipServer, DEFAULT_PORT);
 
-    int len = sprintf(missatgeRegistre, "PR%s", nomUsuari);
+    len = sprintf(missatgeRegistre, "PR%s", nomUsuari);
 
     return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeRegistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
@@ -77,11 +77,11 @@ int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomDomini[100];
     char ipServer[16];
     char missatgeDesregistre[102];
-    //int portUDPremot = DEFAULT_PORT; // Hard coded, s'ha de saber. Estipulem que es farà servir aquest port.
+    int len;
 
     sscanf(adrMI, "%[^@]@%s", nomUsuari, nomDomini);
 
-    int len = sprintf(missatgeDesregistre, "PD%s", nomUsuari);
+    len = sprintf(missatgeDesregistre, "PD%s", nomUsuari);
 
     return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeDesregistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
@@ -89,11 +89,10 @@ int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
 int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char *adrMIremot, char *IPrem, int *portTCPremot, int fitxLog) {
     char ipServer[16];
     char missatgeLocalitzacio[102];
-    //int portUDPremot = DEFAULT_PORT; // Hard coded, s'ha de saber. Estipulem que es farà servir aquest port.
+    int res, long_missatge;
+    
+    long_missatge = sprintf(missatgeLocalitzacio, "PL%s:%s", adrMIlocal, adrMIremot);
 
-    int long_missatge = sprintf(missatgeLocalitzacio, "PL%s:%s", adrMIlocal, adrMIremot);
-
-    int res;
     res = Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeLocalitzacio, &long_missatge, DEFAULT_TIMEOUT*2, fitxLog);
 
     // Ara, "missatgeLocalitzacio" és un string amb '\0' al final

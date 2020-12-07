@@ -1,0 +1,3 @@
+p2p: gcc -o p2p MIp2-aA.c MIp2-aDNSc.c MIp2-p2p.c MIp2-aLUMIc.c MIp2-aMI.c MIp2-tT.c MIp2-tTCP.c MIp2-tUDP.c
+
+nodelumi: gcc -o nodelumi MIp2-aA.c MIp2-aDNSc.c MIp2-nodelumi.c MIp2-aLUMIs.c MIp2-aMI.c MIp2-tT.c MIp2-tTCP.c MIp2-tUDP.c

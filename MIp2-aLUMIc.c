@@ -68,16 +68,7 @@ int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
 
     int len = sprintf(missatgeRegistre, "PR%s", nomUsuari);
 
-    int res;
-    if((res = Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeRegistre, &len, DEFAULT_TIMEOUT, fitxLog)) != 0) {
-        if(res == -1) printf("Error general\n");
-        else if(res == -2) printf("Error: el node no ha respost\n");
-        else if(res == 1) printf("Error: usuari no donat d'alta al node\n");
-
-        return -1;
-    }
-
-    return 0;
+    return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeRegistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
 
 /* Explicacio                                                             */
@@ -92,16 +83,7 @@ int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
 
     int len = sprintf(missatgeDesregistre, "PD%s", nomUsuari);
 
-    int res;
-    if((res = Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeDesregistre, &len, DEFAULT_TIMEOUT, fitxLog)) != 0) {
-        if(res == -1) printf("Error general\n");
-        else if(res == -2) printf("Error: el node no ha respost\n");
-        else if(res == 1) printf("Error: usuari no donat d'alta al node\n");
-
-        return -1;
-    }
-
-    return 0;
+    return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeDesregistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
 
 int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char *adrMIremot, char *IPrem, int *portTCPremot, int fitxLog) {
@@ -112,15 +94,7 @@ int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char
     int long_missatge = sprintf(missatgeLocalitzacio, "PL%s:%s", adrMIlocal, adrMIremot);
 
     int res;
-    if((res = Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeLocalitzacio, &long_missatge, DEFAULT_TIMEOUT*2, fitxLog)) != 0) {
-        if(res == -1) printf("Error general\n");
-        else if(res == -2) printf("Error: el node no ha respost\n");
-        else if(res == 1) printf("Error: usuari ocupat\n");
-        else if(res == 2) printf("Error: usuari o domini no existeix\n");
-        else if(res == 3) printf("Error: usuari offline\n");
-
-        return -1;
-    }
+    res = Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeLocalitzacio, &long_missatge, DEFAULT_TIMEOUT*2, fitxLog);
 
     // Ara, "missatgeLocalitzacio" és un string amb '\0' al final
 
@@ -129,7 +103,7 @@ int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char
 
     sscanf(missatgeLocalitzacio, "%[^:]:%[^:]:%[^:]:%d", adrMI_1, adrMI_2, IPrem, portTCPremot);
 
-    return 0;
+    return res;
 }
 
 int LUMIc_ServeixLocalitzacio(int sckNodeLUMI, const char *ipTCPloc, int portTCPloc, int fitxLog) {

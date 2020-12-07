@@ -57,13 +57,20 @@ int main(int argc, char *argv[]) {
         printf("Error inicialitzar client\n");
     }
 
-    if(LUMIc_DemanaRegistre(sckUDP, nomUsuariDominiLocal, fitxLog) == -1) {
-        printf("Error al registrarse al servidor\n");
+    int res;
+    if((res = LUMIc_DemanaRegistre(sckUDP, nomUsuariDominiLocal, fitxLog)) != 0) {
+        printf("Error al registrarse al servidor: ");
+        
+        if(res == -1) printf("Error general\n");
+        else if(res == -2) printf("El node no ha respost\n");
+        else if(res == 1) printf("Usuari no donat d'alta al node\n");
+
         perror(LUMIc_ObteMissError());
         exit(-1);
     }
 
     while( strcmp("y", buff) == 0) {
+        inici:
         estatus = LLIURE;
         strcpy(ipTCPloc, "0.0.0.0");
         portTCPloc = 0;
@@ -91,10 +98,17 @@ int main(int argc, char *argv[]) {
                 printf("Error al llegir les dades\n");
             }
 
-            if(LUMIc_DemanaLocalitzacio(sckUDP, nomUsuariDominiLocal, nomUsuariDominiRemot, ipTCPrem, &portTCPrem, fitxLog) == -1) {
-                printf("Error al demanar localitzció al servidor\n");
+            if((res = LUMIc_DemanaLocalitzacio(sckUDP, nomUsuariDominiLocal, nomUsuariDominiRemot, ipTCPrem, &portTCPrem, fitxLog)) != 0) {
+                printf("Error al demanar localitzció al servidor: ");
+
+                if(res == -1) printf("Error general\n");
+                else if(res == -2) printf("El node no ha respost\n");
+                else if(res == 1) printf("Usuari ocupat\n");
+                else if(res == 2) printf("Usuari o domini no existeix\n");
+                else if(res == 3) printf("Usuari offline\n");
+
                 perror(LUMIc_ObteMissError());
-                exit(-1);
+                goto inici;
             }
 
             if( (scon = MI_DemanaConv(ipTCPrem, portTCPrem, ipTCPloc, &portTCPloc, nicknameL, nicknameR)) == -1 ) {
@@ -156,8 +170,13 @@ int main(int argc, char *argv[]) {
     }
     
 
-    if(LUMIc_DemanaDesregistre(sckUDP, nomUsuariDominiLocal, fitxLog) == -1) {
-        printf("Error al desregistrarse del servidor\n");
+    if((res = LUMIc_DemanaDesregistre(sckUDP, nomUsuariDominiLocal, fitxLog)) != 0) {
+        printf("Error al desregistrarse del servidor: ");
+
+        if(res == -1) printf("Error general\n");
+        else if(res == -2) printf("El node no ha respost\n");
+        else if(res == 1) printf("Usuari no donat d'alta al node\n");
+
         perror(LUMIc_ObteMissError());
         exit(-1);
     }

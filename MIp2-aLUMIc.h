@@ -24,7 +24,7 @@
 #include "MIp2-aDNSc.h"
 
 #define MAX_ATTEMPTS 10 // Maxim d'intents per enviar un paquet
-#define DEFAULT_TIMEOUT 500     // 500ms de timeout per rebre resposta de servidor a una peticio
+#define DEFAULT_TIMEOUT 100     // 100ms de timeout per rebre resposta de servidor a una peticio
 #define DEFAULT_PORT 3344
 
 #define OCUPAT 0

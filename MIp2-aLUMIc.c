@@ -38,6 +38,14 @@ int ctoi(char c);
 /* En termes de capes de l'aplicació, aquest conjunt de funcions externes */
 /* formen la interfície de la capa LUMI, en la part client.               */
 
+/*
+    Fa la inicialització de l'agent LUMI creant el socket LUMI UDP i 
+    obrint/creant el fitxer de logs. Retorna el file descriptor del 
+    socket UDP de LUMI i passa el file descriptor del fitxer de logs per
+    paràmetre.
+
+    Retorna -1 si hi ha algún error, 0 en cas contrari.
+*/
 int LUMIc_IniciaClient(char *nomUsuariDomini, int *fitxLog) {
     int sckUDP;
 
@@ -49,10 +57,18 @@ int LUMIc_IniciaClient(char *nomUsuariDomini, int *fitxLog) {
     sprintf(nomFitxLog, "p2p-%s.log", nomUsuariDomini);
     *fitxLog = Log_CreaFitx(nomFitxLog);
 
+    if(*fitxLog == -1) return -1;
+
     return sckUDP;
 }
 
-/* Explicacio                                                             */
+/*
+    Fa una petició de registre al node LUMI. El sckNodeLUMI passarà
+    a ser un socket UDP "connectat" amb el node del domini si tot va bé.
+
+    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
+    respost; 1 si l'usuari no està donat d'alta al node del domini.
+*/
 int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomUsuari[100];
     char nomDomini[100];
@@ -71,7 +87,12 @@ int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeRegistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
 
-/* Explicacio                                                             */
+/*
+    Fa una petició de desregistre al node LUMI.
+
+    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
+    respost; 1 si l'usuari no està donat d'alta al node del domini.
+*/
 int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomUsuari[100];
     char nomDomini[100];
@@ -86,6 +107,15 @@ int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     return Envia_i_RepResposta_amb_Intents_i_Timeout(sckNodeLUMI, missatgeDesregistre, &len, DEFAULT_TIMEOUT, fitxLog);
 }
 
+/*
+    Fa una petició de localització de 'adrMIremot' al node LUMI.
+    Emplena 'IPrem' i 'portTCPremot' amb, respectivament, l'@IP i el 
+    #port TCP d'escolta de l'agent que es vol localitzar.
+
+    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
+    respost; 1 si l'usuari remot està ocupat; 2 si l'usuari remot o 
+    el domini no existeix; 3 si l'usuari remot està offline.
+*/
 int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char *adrMIremot, char *IPrem, int *portTCPremot, int fitxLog) {
     char ipServer[16];
     char missatgeLocalitzacio[102];
@@ -105,6 +135,14 @@ int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char
     return res;
 }
 
+/*
+    Serveix una petició de localització que fa el node LUMI del domini.
+    'ipTCPloc' i 'portTCPloc' han de contenir, respectivament, l'@IP i 
+    el #port TCP d'escolta de l'agent local.
+
+    Retorna 1 si tot va bé; 0 si s'han rebut 0 caràcters;
+    -1 si hi ha error.
+*/
 int LUMIc_ServeixLocalitzacio(int sckNodeLUMI, const char *ipTCPloc, int portTCPloc, int fitxLog) {
     char ipServer[16];
     char missatgeRebut[102];

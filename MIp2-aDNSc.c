@@ -57,7 +57,6 @@ int DNSc_ResolDNSaIP(const char *NomDNS, char *IP) {
 /*                                                                        */
 /* Retorna aquest missatge de text en un "string" de C (vector de chars   */
 /* imprimibles acabat en '\0')                                            */
-/*                                                                        */
 char* DNSc_ObteMissError(void) {
     
     return strerror(errno);

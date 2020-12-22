@@ -43,7 +43,15 @@ int Log_TancaFitx(int FitxLog);
 /* En termes de capes de l'aplicació, aquest conjunt de funcions externes */
 /* formen la interfície de la capa LUMI, en la part servidora.            */
 
-/* Explcacio                                                              */
+/*
+    Fa la inicialització del node LUMI creant el socket LUMI UDP i 
+    obrint/creant el fitxer de logs. "Retorna" el file descriptor del 
+    fitxer de logs per paràmetre.
+
+    Retorna:
+    -1 si hi ha algún error;
+    el file descriptor del socket UDP de LUMI en cas contrari;
+*/
 int LUMIs_IniciaServidor(int *fitxLog) {
     int sckUDP;
 
@@ -61,7 +69,26 @@ int LUMIs_IniciaServidor(int *fitxLog) {
     return sckUDP;
 }
 
-/* Retorna -1 si hi ha error; 0 si alguna cosa; 1 si petició registre     */
+/* A través del socket de LUMI d’identificador “sckNodeLUMI” atén una     */
+/* petició de servei rebuda des d'un agent o un altre node, i omple       */
+/* “SeqBytes” i “LongSeqBytes” amb una “informació” que depèn del tipus   */
+/* de petició i "IPrem" i "portUDPrem" amb l'@IP i #port UDP d'on s'ha    */
+/* rebut aquesta informació.                                              */
+/*                                                                        */
+/* “LongSeqBytes”, abans de cridar la funció, ha de contenir la longitud  */ 
+/* de la seqüència de bytes “SeqBytes”, que ha de ser >= 99 (després de   */
+/* cridar-la, contindrà la longitud en bytes d’aquella “informació”).     */
+/*                                                                        */
+/* També farà les accions que siguin necessàries per tractar el tipus de  */
+/* petició que s'hagi rebut.                                              */
+/*                                                                        */
+/* Retorna:                                                               */
+/* -1 si hi ha error;                                                     */
+/* 0 si s'han rebut 0 bytes;                                              */
+/* 1 si rep Petició Registre;                                             */
+/* 2 si rep Petició Desregistre;                                          */
+/* 3 si rep Petició Localització;                                         */
+/* 4 si rep Resposta Localització;                                        */
 int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, char *IPrem, int *portUDPrem, int fitxLog) {
     char tipus[3];
     char linea_rebuda[102];
@@ -94,7 +121,12 @@ int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, cha
 
     SeqBytes[*LongSeqBytes] = '\0'; // Convertim a string
 
-    // Es podria millorar guardant una taula que conti quantes peticions iguals s'han rebut des d'un origen concret (cada entrada de la taula tindria aquesta informació per un origen diferent)
+    // Es podria millorar guardant una taula que conti quantes 
+    // peticions iguals s'han rebut des d'un origen concret, 
+    // però creiem que no val la pena desenvolupar això degut 
+    // al temps que ens queda per entregar i que, per el cas 
+    // d'ús que servirà aquest programa, no fer això funciona 
+    // suficientment bé.
     // ---------------------------------
     // | ORIGEN | MISSATGE | QUANTITAT |
     // |--------|----------|-----------|
@@ -164,7 +196,7 @@ int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, cha
             }
             else { // Només fem això si l'usuari SÍ existeix
                 if(taula[i].adr_LUMI != NULL) { // Si l'usuari està marcat com a "online"
-                    if(nPeticionsIguals < MAX_ATTEMPTS-1) {
+                    if(nPeticionsIguals < MAX_ATTEMPTS-1) { // Si no s'han fet més de MAX_ATTEMPTS-1 peticions iguals
                         if(LUMIs_DemanaLocalitzacio(sckNodeLUMI, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port, adrMI_1, adrMI_2, fitxLog) == -1) {
                             perror("Error en demanar localització al client 2\n");
                             exit(-1);
@@ -236,6 +268,15 @@ int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, cha
     return nTipus;
 }
 
+/*
+    A través del socket de LUMI d’identificador “sckNodeLUMI”, envia el 
+    missatge de resposta "resposta" de longitud "longResposta", a l'estació
+    identificada per l'@IP i #port UDP "IPrem" i "portUDPrem" respectivament.
+
+    Retorna:
+    -1 si hi ha error;
+    la longitud de la resposta enviada si tot va bé;
+*/
 int LUMIs_Resposta(int sckNodeLUMI, const char *resposta, int longResposta, const char *IPrem, int portUDPrem, int fitxLog) {
 
     int len_enviada;
@@ -250,12 +291,25 @@ int LUMIs_Resposta(int sckNodeLUMI, const char *resposta, int longResposta, cons
     temp[longResposta] = '\0';
 
     sprintf(miss_log, "S: %s:UDP:%d, %s, %d", IPrem, portUDPrem, temp, len_enviada);
-    Log_Escriu(fitxLog, miss_log);
+    if(Log_Escriu(fitxLog, miss_log) == -1) return -1;
 
     return len_enviada;
 }
 
-int LUMIs_DemanaLocalitzacio(int sckNodeLUMI, const char *IPrem, int portUDPrem, char *adrMI_1, char *adrMI_2, int fitxLog) {
+/*
+    A través del socket de LUMI d’identificador “sckNodeLUMI”, fa una 
+    petició de localització de 'adrMIremot' a l'estació remota (pot ser 
+    un agent o un altre node) identificada per l'@IP i #portUDP "IPrem" 
+    i "portUDPrem" respectivament.
+    "adrMI_1" i "adrMI_2" contenen, respectivament, l'@MI de l'agent d'on
+    origina la petició de localització, i l'@MI de l'agent que es vol 
+    localitzar.
+
+    Retorna:
+    -1 si hi ha error;
+    0 si tot va bé; 
+*/
+int LUMIs_DemanaLocalitzacio(int sckNodeLUMI, const char *IPrem, int portUDPrem, const char *adrMI_1, const char *adrMI_2, int fitxLog) {
     char missatgeLocalitzacio[100];
     char miss_log[100];
     int len;
@@ -271,14 +325,23 @@ int LUMIs_DemanaLocalitzacio(int sckNodeLUMI, const char *IPrem, int portUDPrem,
     }
 
     sprintf(miss_log, "S: %s:UDP:%d, %s, %d", IPrem, portUDPrem, missatgeLocalitzacio, len);
-    Log_Escriu(fitxLog, miss_log);
+    if(Log_Escriu(fitxLog, miss_log) == -1) return -1;
 
     return 0;
 }
 
+/*
+    Fa la finalització del node.
+
+    Retorna:
+    -1 si hi ha error;
+    0 si tot va bé;
+*/
 void LUMIs_AcabaServidor(int fitxLog) {
 
-    Log_TancaFitx(fitxLog);
+    saveTableToFile();
+
+    return Log_TancaFitx(fitxLog);
 }
 
 /* Obté un missatge de text que descriu l'error produït en la darrera     */

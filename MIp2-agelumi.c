@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
         printf("Error al llegir les dades\n");
     }
 
-    if( (sckUDP = LUMIc_IniciaClient(&fitxLog)) == -1 ) {
+    if( (sckUDP = LUMIc_IniciaClient(nomUsuariDominiLocal, &fitxLog)) == -1 ) {
         printf("Error inicialitzar client\n");
     }
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
                 exit(-1);
         }
 
-        if(LUMIc_DemanaRegistre(sckUDP, nomUsuariDominiLocal, strlen(nomUsuariDominiLocal), fitxLog) == -1) {
+        if(LUMIc_DemanaRegistre(sckUDP, nomUsuariDominiLocal, fitxLog) == -1) {
             printf("Error al registrarse al servidor\n");
             perror(LUMIc_ObteMissError());
             exit(-1);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
     }
     
 
-    if(LUMIc_DemanaDesregistre(sckUDP, nomUsuariDominiLocal, strlen(nomUsuariDominiLocal), fitxLog) == -1) {
+    if(LUMIc_DemanaDesregistre(sckUDP, nomUsuariDominiLocal, fitxLog) == -1) {
         printf("Error al desregistrarse del servidor\n");
         perror(LUMIc_ObteMissError());
         exit(-1);

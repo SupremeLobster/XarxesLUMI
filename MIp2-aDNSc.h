@@ -27,6 +27,5 @@
 #include <netdb.h>
 
 int DNSc_ResolDNSaIP(const char *NomDNS, char *IP);
-int DNSc_ResolIPaDNS(const char *IP, char *NomDNS);
 char* DNSc_ObteMissError(void);
 /* int DNSc_FuncioExterna(arg1, arg2...);                                 */

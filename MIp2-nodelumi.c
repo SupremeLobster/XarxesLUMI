@@ -22,9 +22,6 @@
 
 #define N_SOCKETS 2
 
-
-
-
 int N_USUARIS = 0;
 int fitxLog;
 
@@ -121,8 +118,7 @@ int main(int argc,char *argv[]) {
             exit(-1);
         }
 
-        if( selected == sckUDP){
-            
+        if(selected == sckUDP) {
             char seq[100];
             int long_seq;
             char IPrem[16];
@@ -130,9 +126,8 @@ int main(int argc,char *argv[]) {
 
             tipus = LUMIs_ServeixPeticio(sckUDP, seq, &long_seq, IPrem, &portUDPrem, fitxLog);
         }
-        else{
-
-            char seq[2];
+        else {
+            char seq[100]; // 100 per si l'usuari entra moltes coses enlloc d'un sol caràcter, així no peta.
             int long_seq;
 
             if( (long_seq = read(0, seq, sizeof(seq))) == -1 ) {
@@ -141,78 +136,83 @@ int main(int argc,char *argv[]) {
             }
             seq[1] = '\0';
 
-            if(strcmp(seq,"1") == 0)listUsers();
-            else if(strcmp(seq,"2") == 0)addUser();
-            else if(strcmp(seq,"3") == 0)removeUser();
+            if(strcmp(seq, "1") == 0) listUsers();
+            else if(strcmp(seq, "2") == 0) addUser();
+            else if(strcmp(seq, "3") == 0) removeUser();
 
             printf("---------------------- ADMINISTRATOR MENU -----------------------------\n");
             printf("1. List users\n");
             printf("2. Add user\n");
             printf("3. Remove user\n");
-            
         }
     }
 
-    LUMIs_AcabaServidor(fitxLog);
+    LUMIs_AcabaServidor(fitxLog); // No s'hauria d'arribar mai aquí, pero ho posem per si de cas.
 
     return 0;
  }
 
-void listUsers(){
+/*
+    Escriu per pantalla la llista de tots els usuaris donats d'alta en aquest node
+    i el seu estat (OFFLINE/ONLINE). En cas d'estar online es mostrarà l'@LUMI de l'usuari.
+*/
+void listUsers() {
     int i;
 
-    for(i=0;i<N_USUARIS;i++){
-        if(!taula[i].adr_LUMI)printf("OFFLINE %s\n",taula[i].adr_MI);
-        else printf("%s %s:%d\n",taula[i].adr_MI,taula[i].adr_LUMI->ip,taula[i].adr_LUMI->port);
+    for(i=0; i<N_USUARIS; i++) {
+        if(!taula[i].adr_LUMI) printf("OFFLINE %s\n", taula[i].adr_MI);
+        else printf("%s %s:%d\n", taula[i].adr_MI, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port);
     }
 }
 
-void addUser(){
-    char nomUsuari[100];
+/*
+    Dona d'alta un nou usuari en aquest node.
+*/
+void addUser() {
     struct pair_MI_status element;
+
     printf("Enter new user name:");
-    scanf("%s",nomUsuari);
+    scanf("%s", element.adr_MI);
     
-    strcpy(element.adr_MI, nomUsuari);
     element.adr_LUMI = NULL;
 
     inserirOrdenat(element);
-    saveTableToFile();
-    printf("User %s added correctly\n",nomUsuari);
+    
+    printf("User %s added correctly\n", element.adr_MI);
 }
 
-void saveTableToFile(){
+/*
+    Guarda al fitxer de configuració la taula d'usuaris-estats que el node té a memòria (RAM).
+*/
+void saveTableToFile() {
     FILE *fp;
     int i;
 
     fp = fopen("MIp2-nodelumi.cfg", "w+");
     
-    fprintf(fp, "%s\n",nomDomini);
-    for(i=0;i<N_USUARIS;i++)fprintf(fp, "%s\n",taula[i].adr_MI);
+    fprintf(fp, "%s\n", nomDomini);
+    for(i=0; i<N_USUARIS; i++) fprintf(fp, "%s\n", taula[i].adr_MI);
+
     fclose(fp);
 }
 
-void removeUser(){
-
+/*
+    Dona de baixa un usuari d'aquest node.
+*/
+void removeUser() {
     char *nomUsuari = NULL;
-    printf("Enter user name to remove:");
-    scanf("%s",nomUsuari);
+    int pos, i;
 
-    int pos = cercaUsuari(nomUsuari);
-    int i;
-    if(pos == -1)printf("Error: User not found\n");
-    else{
-        FILE *fp;
-        fp = fopen("MIp2-nodelumi.cfg", "w+");
-        for(i=0;i<pos;i++){
-            fprintf(fp, "%s\n",taula[i].adr_MI);
-        }
-        for(i=pos;i<N_USUARIS-1;i++){
-            taula[i] = taula[i+1];
-            fprintf(fp, "%s\n",taula[i].adr_MI);
-        }
-        fclose(fp);
-        printf("User %s deleted correctly\n",nomUsuari);
+    printf("Enter user name to remove:");
+    scanf("%s", nomUsuari);
+
+    pos = cercaUsuari(nomUsuari);
+
+    if(pos == -1) printf("Error: User not found\n");
+    else {
+        for(i=pos; i<N_USUARIS-1; i++) taula[i] = taula[i+1];
+
+        printf("User %s deleted correctly\n", nomUsuari);
     }
 }
 
@@ -220,8 +220,15 @@ void removeUser(){
 /* servir només en aquest mateix fitxer. Les seves declaracions es        */
 /* troben a l'inici d'aquest fitxer.                                      */
 
-/* Si l'usuari no existeix a la taula, retorna -1. Altrament retorna la   */
-/* seva posició (índex) en el rang [0 , SIZE_TABLE-1]                     */
+/*
+    "nomUsuari" és l'@MI d'un usuari i volem trobar la posició en què aquesta
+    es troba dins la taula d'usuaris. La taula ha d'estar ordenada per @MI, 
+    alfabèticament.
+
+    Retorna:
+    -1 si l'usuari no existeix a la taula;
+    la posició de l'usuari (índex) en el rang [0 , SIZE_TABLE-1] si tot va bé;
+*/
 int cercaUsuari(const char *nomUsuari) {
     int pos = i_cercaUsuari(nomUsuari, 0, N_USUARIS-1);
 
@@ -230,7 +237,20 @@ int cercaUsuari(const char *nomUsuari) {
     return pos;
 }
 
-/* Retorna la seva posició (índex) en el rang [0 , SIZE_TABLE-1]          */
+/*
+    Fem cerca dicotòmica recursiva.
+
+    "nomUsuari" és l'@MI d'un usuari i volem trobar la posició en què aquesta
+    es troba dins la taula d'usuaris. La taula ha d'estar ordenada per @MI, 
+    alfabèticament.
+
+    Retorna:
+    la posició de l'usuari (índex) en el rang [0 , SIZE_TABLE-1];
+
+    Si l'usuari no es troba en la taula, retorna la posició a on HAURIA d'estar.
+    La funció que ha fet la crida té la responsabilitat de comprovar si l'usuari
+    que es busca existeix realment en la posició retornada o no.
+*/
 int i_cercaUsuari(const char *nomUsuari, int left, int right) {
     int mid = (left+right)/2;
 
@@ -247,17 +267,21 @@ int i_cercaUsuari(const char *nomUsuari, int left, int right) {
     }
 }
 
+/*
+    Fa una inserció ordenada de "e" a la taula ordenada d'usuaris-estats.
+*/
 void inserirOrdenat(const struct pair_MI_status e) {
-    int pos = i_cercaUsuari(e.adr_MI, 0, N_USUARIS-1);
-    int i;
+    int i, pos = i_cercaUsuari(e.adr_MI, 0, N_USUARIS-1);
 
-    for(i=N_USUARIS; i>pos; i--) {
-        strcpy(taula[i].adr_MI, taula[i-1].adr_MI);
-        taula[i].adr_LUMI = taula[i-1].adr_LUMI;
+    if(strcmp(taula[pos].adr_MI, e.adr_MI) != 0) { // Només fem inserció si no hi és a la taula. Evitem tenir usuaris repetits.
+        for(i=N_USUARIS; i>pos; i--) {
+            strcpy(taula[i].adr_MI, taula[i-1].adr_MI);
+            taula[i].adr_LUMI = taula[i-1].adr_LUMI;
+        }
+
+        N_USUARIS++;
+
+        strcpy(taula[pos].adr_MI, e.adr_MI);
+        taula[pos].adr_LUMI = e.adr_LUMI;
     }
-
-    N_USUARIS++;
-
-    strcpy(taula[pos].adr_MI, e.adr_MI);
-    taula[pos].adr_LUMI = e.adr_LUMI;
 }

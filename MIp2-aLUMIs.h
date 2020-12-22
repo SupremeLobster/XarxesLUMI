@@ -37,6 +37,6 @@ struct pair_MI_status taula[SIZE_TABLE];
 int LUMIs_IniciaServidor(int *fitxLog);
 int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, char *IPrem, int *portUDPrem, int fitxLog);
 int LUMIs_Resposta(int sckNodeLUMI, const char *resposta, int longResposta, const char *IPrem, int portUDPrem, int fitxLog);
-int LUMIs_DemanaLocalitzacio(int sckNodeLUMI, const char *IPrem, int portUDPrem, char *adrMI_1, char *adrMI_2, int fitxLog);
+int LUMIs_DemanaLocalitzacio(int sckNodeLUMI, const char *IPrem, int portUDPrem, const char *adrMI_1, const char *adrMI_2, int fitxLog);
 void LUMIs_AcabaServidor(int fitxLog);
 const char* LUMIs_ObteMissError(void);

@@ -40,11 +40,12 @@ int ctoi(char c);
 
 /*
     Fa la inicialització de l'agent LUMI creant el socket LUMI UDP i 
-    obrint/creant el fitxer de logs. Retorna el file descriptor del 
-    socket UDP de LUMI i passa el file descriptor del fitxer de logs per
-    paràmetre.
+    obrint/creant el fitxer de logs. "Retorna" el file descriptor del 
+    fitxer de logs per paràmetre.
 
-    Retorna -1 si hi ha algún error, 0 en cas contrari.
+    Retorna:
+    -1 si hi ha algún error;
+    el file descriptor del socket UDP de LUMI en cas contrari;
 */
 int LUMIc_IniciaClient(const char *nomUsuariDomini, int *fitxLog) {
     int sckUDP;
@@ -66,8 +67,11 @@ int LUMIc_IniciaClient(const char *nomUsuariDomini, int *fitxLog) {
     Fa una petició de registre al node LUMI. El sckNodeLUMI passarà
     a ser un socket UDP "connectat" amb el node del domini si tot va bé.
 
-    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
-    respost; 1 si l'usuari no està donat d'alta al node del domini.
+    Retorna:
+    0 si tot va bé;
+    -1 si hi ha error;
+    -2 si el node LUMI no ha respost;
+    1 si l'usuari no està donat d'alta al node del domini;
 */
 int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomUsuari[100];
@@ -90,8 +94,11 @@ int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
 /*
     Fa una petició de desregistre al node LUMI.
 
-    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
-    respost; 1 si l'usuari no està donat d'alta al node del domini.
+    Retorna:
+    0 si tot va bé;
+    -1 si hi ha error;
+    -2 si el node LUMI no ha respost;
+    1 si l'usuari no està donat d'alta al node del domini;
 */
 int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     char nomUsuari[100];
@@ -112,9 +119,13 @@ int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog) {
     Emplena 'IPrem' i 'portTCPremot' amb, respectivament, l'@IP i el 
     #port TCP d'escolta de l'agent que es vol localitzar.
 
-    Retorna 0 si tot va bé; -1 si hi ha error; -2 si el node LUMI no ha 
-    respost; 1 si l'usuari remot està ocupat; 2 si l'usuari remot o 
-    el domini no existeix; 3 si l'usuari remot està offline.
+    Retorna:
+    0 si tot va bé; 
+    -1 si hi ha error;
+    -2 si el node LUMI no ha respost;
+    1 si l'usuari remot està ocupat;
+    2 si l'usuari remot o el domini no existeix;
+    3 si l'usuari remot està offline;
 */
 int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char *adrMIremot, char *IPrem, int *portTCPremot, int fitxLog) {
     char ipServer[16];
@@ -136,12 +147,14 @@ int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char
 }
 
 /*
-    Serveix una petició de localització que fa el node LUMI del domini.
+    Serveix una petició de localització que arriba des del node LUMI del domini.
     'ipTCPloc' i 'portTCPloc' han de contenir, respectivament, l'@IP i 
     el #port TCP d'escolta de l'agent local.
 
-    Retorna 1 si tot va bé; 0 si s'han rebut 0 caràcters;
-    -1 si hi ha error.
+    Retorna:
+    1 si tot va bé;
+    0 si s'han rebut 0 caràcters;
+    -1 si hi ha error;
 */
 int LUMIc_ServeixLocalitzacio(int sckNodeLUMI, const char *ipTCPloc, int portTCPloc, int fitxLog) {
     char ipServer[16];
@@ -179,23 +192,21 @@ int LUMIc_ServeixLocalitzacio(int sckNodeLUMI, const char *ipTCPloc, int portTCP
     return 1;
 }
 
-/* A través del socket de conversa de MI d’identificador “SckConvMI” (un  */
-/* socket "connectat") atén una petició de servei de l’usuari remot, i    */
-/* omple “SeqBytes” i “LongSeqBytes” amb una “informació” que depèn del   */
-/* tipus de petició.                                                      */
+/* A través del socket de LUMI d’identificador “sckNodeLUMI” atén una     */
+/* petició de servei rebuda des del node, i omple “SeqBytes” i            */
+/* “LongSeqBytes” amb una “informació” que depèn del tipus de petició.    */
 /*                                                                        */
 /* “LongSeqBytes”, abans de cridar la funció, ha de contenir la longitud  */ 
 /* de la seqüència de bytes “SeqBytes”, que ha de ser >= 99 (després de   */
 /* cridar-la, contindrà la longitud en bytes d’aquella “informació”).     */
 /*                                                                        */
-/* Atendre una petició de servei pot ser: rebre una línia escrita per     */
-/* l’usuari remot i llavors omplir “SeqBytes” i “LongSeqBytes” amb els    */
-/* caràcters i el nombre de caràcters de la línia rebuda, respectivament; */
-/* o bé servir un altre tipus de petició de servei (a definir); o bé      */
-/* detectar l’acabament de la conversa per part de l’usuari remot.        */
-/*                                                                        */
-/* Retorna -1 si hi ha error; 0 si alguna cosa; 1 si rep resposta petició */
-/* registre                                                               */
+/* Retorna:                                                               */
+/* -1 si hi ha error;                                                     */
+/* 0 si s'han rebut 0 bytes;                                              */
+/* 1 si rep Resposta Registre;                                            */
+/* 2 si rep Resposta Desregistre;                                         */
+/* 3 si rep Resposta Localització;                                        */
+/* 4 si rep Petició Localització;                                         */
 int LUMIc_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, int fitxLog) {
     char tipus[3];
     char linea_rebuda[102];
@@ -204,16 +215,16 @@ int LUMIc_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, int
     int long_lineaRebuda, portUDPrem;
 
     if(( long_lineaRebuda = UDP_Rep(sckNodeLUMI, linea_rebuda, 102) ) == -1) return -1;
-    else if( long_lineaRebuda == 0) return 0;
+    else if(long_lineaRebuda == 0) return 0;
 
-    UDP_TrobaAdrSockRem(sckNodeLUMI, IPrem, &portUDPrem);
+    if(UDP_TrobaAdrSockRem(sckNodeLUMI, IPrem, &portUDPrem) == -1) return -1;
 
     char temp[102];
     memcpy(temp, linea_rebuda, long_lineaRebuda);
     temp[long_lineaRebuda] = '\0';
 
     sprintf(missatge_log, "R: %s:UDP:%d, %s, %d", IPrem, portUDPrem, temp, long_lineaRebuda);
-    Log_Escriu(fitxLog, missatge_log);
+    if(Log_Escriu(fitxLog, missatge_log) == -1) return -1;
 
     tipus[0] = linea_rebuda[0];
     tipus[1] = linea_rebuda[1];
@@ -228,13 +239,23 @@ int LUMIc_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, int
     else if( strcmp(tipus, "RD") == 0 ) ret = 2;
     else if( strcmp(tipus, "RL") == 0 ) ret = 3;
     else if( strcmp(tipus, "PL") == 0 ) ret = 4;
+    else ret = -1;
 
     return ret;
 }
 
+/*
+    Tanca el socket "connectat" de LUMI 'sckUDP'
+
+    Retorna:
+    -1 si hi ha error;
+    0 si tot va bé;
+*/
 int LUMIc_AcabaClient(int sckUDP, int fitxLog) {
 
-    UDP_TancaSock(sckUDP);
+    if(UDP_TancaSock(sckUDP) == -1) {
+        return -1;
+    }
 
     return Log_TancaFitx(fitxLog);
 }
@@ -262,9 +283,28 @@ const char* LUMIc_ObteMissError(void) {
 /* servir només en aquest mateix fitxer. Les seves declaracions es        */
 /* troben a l'inici d'aquest fitxer.                                      */
 
-/* Retorna -1 si hi ha error; -2 si el node respon amb codi d'error; -3   */
-/* si el node no ha respost a la petició; 0 si el node respon amb codi    */
-/* correcte                                                               */
+/*
+    "sckNodeLUMI" és el socket LUMI connectat amb el node del domini.
+
+    "SeqBytes" i "LongSeqBytes" inicialment han de contenir, 
+    respectivament, la informació a enviar al node i la longitud d'aquesta 
+    informació, i un cop finalitzada l'execució contindran, 
+    respectivament, la informaciò rebuda de resposta i la longitud d'aquesta.
+    
+    "milisTimeout" és el temps que es vol esperar abans de fer timeout 
+    per cada petició, en milisegons. Es faran 10 peticions com a màxim per 
+    cada crida d'aquesta funció. Si a la desena petició no es rep resposta 
+    abans del timeout, es retorna -2.
+    
+    Retorna:
+    -1 si hi ha error de sistema (alguna funció llança error);
+    -2 si el node no respon;
+    >=0 si tot va bé i es rep una resposta;
+
+    El significat del valor >=0 que es retorni depèn del context en què 
+    aquesta funció ha sigut cridada, i per tant és la funció que ha fet 
+    la crida qui ha de saber interpretar aquest valor.
+*/
 int Envia_i_RepResposta_amb_Intents_i_Timeout(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, int milisTimeout, int fitxLog) {
     char respostaPeticio[150];
     char missatge_log[150];
@@ -298,11 +338,9 @@ int Envia_i_RepResposta_amb_Intents_i_Timeout(int sckNodeLUMI, char *SeqBytes, i
     }
 
     if(hiHaTimeout == 0) { // S'ha rebut resposta sense fer timeout dintre del limit d'intents.
-        int aux = LUMIc_ServeixPeticio(sckNodeLUMI, respostaPeticio, &long_respostaPeticio, fitxLog);
-
-        if(aux!=1 && aux!=2 && aux!=3) { // Si no retorna "1" o "2" "3", hi ha hagut error. "1" vol dir que ha arribat RR del node, "2" que ha arribat RD, "3" que ha arribat RL
+        if(LUMIc_ServeixPeticio(sckNodeLUMI, respostaPeticio, &long_respostaPeticio, fitxLog) == -1) {
             return -1;
-        } // POTSER NO CAL
+        }
 
         ret = ctoi(respostaPeticio[0]);
         
@@ -368,6 +406,11 @@ int Log_TancaFitx(int FitxLog) {
     return close(FitxLog);
 }
 
+/*
+    "c" és el caràcter a convertir a int.
+
+    Retorna el valor enter positiu de 0..9 representat pel caràcter "c".
+*/
 int ctoi(char c) {
 
     char a[2];

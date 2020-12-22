@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     int portTCPrem;
     char nicknameL[100];
     char nicknameR[100];
-    char buff[2] = "y\0";
+    char buff[100] = "y\0";
 
     estatus = LLIURE;
 
@@ -168,6 +168,7 @@ int main(int argc, char *argv[]) {
 
         printf("[SYSTEM] Vols crear una conversa nova? y/n\n");
         scanf("%s", buff);
+        buff[1] = '\0';
     }
     
 

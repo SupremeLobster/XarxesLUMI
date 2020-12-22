@@ -46,7 +46,7 @@ int ctoi(char c);
 
     Retorna -1 si hi ha algún error, 0 en cas contrari.
 */
-int LUMIc_IniciaClient(char *nomUsuariDomini, int *fitxLog) {
+int LUMIc_IniciaClient(const char *nomUsuariDomini, int *fitxLog) {
     int sckUDP;
 
     if((sckUDP = UDP_CreaSock("0.0.0.0", 0)) == -1) {

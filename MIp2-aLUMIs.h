@@ -18,13 +18,21 @@
 #define MAX_ATTEMPTS 10 // Maxim d'intents per enviar un paquet
 #define TIMEOUT 500     // 500ms de timeout per rebre resposta de servidor a una peticio
 #define DEFAULT_PORT 3344
-
-char nomDomini[100];
+#define SIZE_TABLE 100
 
 struct pair_address {
     char ip[16];
     int port;
 };
+struct pair_MI_status {
+    char adr_MI[100];
+    struct pair_address *adr_LUMI; // NULL = offline
+};
+
+char nomDomini[100];
+char SeqBytesAnterior[100];
+int nPeticionsIguals;
+struct pair_MI_status taula[SIZE_TABLE];
 
 int LUMIs_IniciaServidor(int *fitxLog);
 int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, char *IPrem, int *portUDPrem, int fitxLog);

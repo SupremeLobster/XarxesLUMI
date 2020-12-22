@@ -21,15 +21,10 @@
 
 
 #define N_SOCKETS 2
-#define SIZE_TABLE 100
 
 
-struct pair_MI_status {
-    char adr_MI[100];
-    struct pair_address *adr_LUMI; // NULL = offline
-};
 
-struct pair_MI_status taula[SIZE_TABLE];
+
 int N_USUARIS = 0;
 int fitxLog;
 
@@ -134,131 +129,6 @@ int main(int argc,char *argv[]) {
             int portUDPrem, tipus;
 
             tipus = LUMIs_ServeixPeticio(sckUDP, seq, &long_seq, IPrem, &portUDPrem, fitxLog);
-            seq[long_seq] = '\0'; // Convertim a string
-
-            if(tipus == 1) { // Peticio de registre (PR)
-                int i;
-                char missatge[3] = "RR0";
-
-                if((i = cercaUsuari(seq)) == -1) missatge[2] = '1'; // Usuari no existeix
-
-                if(LUMIs_Resposta(sckUDP, missatge, 3, IPrem, portUDPrem, fitxLog) == -1) {
-                    perror("Error enviar resposta\n");
-                    exit(-1);
-                }
-
-                if(i != -1) { // Només fem això si l'usuari SÍ existeix
-                    if(taula[i].adr_LUMI == NULL) taula[i].adr_LUMI = malloc(sizeof(struct pair_address)); // Reservem memoria
-
-                    strcpy(taula[i].adr_LUMI->ip, IPrem); // Assignem valor a IP
-                    taula[i].adr_LUMI->port = portUDPrem; // Assignem valor a PORT
-
-                    //printf("@MI: %s     @sckLUMI: %s:%d\n", taula[i].adr_MI, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port);
-                }
-            }
-            else if(tipus == 2) { // Peticio de desregistre (PD)
-                int i;
-                char missatge[3] = "RD0";
-
-                if((i = cercaUsuari(seq)) == -1) missatge[2] = '1'; // Usuari no existeix
-
-                if(LUMIs_Resposta(sckUDP, missatge, 3, IPrem, portUDPrem, fitxLog) == -1) {
-                    perror("Error enviar resposta\n");
-                    exit(-1);
-                }
-
-                if(i != -1) { // Només fem això si l'usuari SÍ existeix
-                    free(taula[i].adr_LUMI); // Alliberem memoria
-                    taula[i].adr_LUMI = NULL; // El posem a offline
-                }
-            }
-            else if(tipus == 3) { // Peticio de localització (PL)
-                int i, longMissatge;
-                char missatgeResposta[150];
-
-                char adrMI_1[100];
-                char nomUsuari_1[100];
-                char nomDomini_1[100];
-
-                char adrMI_2[100];
-                char nomUsuari_2[100];
-                char nomDomini_2[100];
-
-                sscanf(seq, "%[^:]:%s", adrMI_1, adrMI_2);
-                sscanf(adrMI_1, "%[^@]@%s", nomUsuari_1, nomDomini_1);
-                sscanf(adrMI_2, "%[^@]@%s", nomUsuari_2, nomDomini_2);
-
-                //if( strcmp(nomDomini, nomDomini_1) == 0 ) { // MILLORA 4. Només responem a peticions que ens facin els usuaris d'aquest domini
-                    longMissatge = sprintf(missatgeResposta, "RL0%s:%s", adrMI_1, adrMI_2);
-
-                    if( strcmp(nomDomini, nomDomini_2) == 0 ) { // Si la peticio es per un usuari d'aquest domini
-                        if((i = cercaUsuari(nomUsuari_2)) == -1) { // Usuari no existeix
-                            missatgeResposta[2] = '2';
-                        }
-                        else { // Només fem això si l'usuari SÍ existeix
-                            if(taula[i].adr_LUMI != NULL) { // Si l'usuari està marcat com a "online"
-                                if(LUMIs_DemanaLocalitzacio(sckUDP, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port, adrMI_1, adrMI_2, fitxLog) == -1) {
-                                    perror("Error en demanar localització al client 2\n");
-                                    exit(-1);
-                                }
-                            }
-                            else {  // Si l'usuari està marcat com a "offline"
-                                missatgeResposta[2] = '3';
-                            }
-                        }
-                    }
-                    else { // Si la peticio NO es per un usuari d'aquest domini
-                        char IP_d2[16];
-                        int portPeticio;
-
-                        portPeticio = DEFAULT_PORT;
-
-                        if(DNSc_ResolDNSaIP(nomDomini_2, IP_d2) == -1) {
-                            missatgeResposta[2] = '2';
-                        }
-                        else if(LUMIs_DemanaLocalitzacio(sckUDP, IP_d2, portPeticio, adrMI_1, adrMI_2, fitxLog) == -1) {
-                            perror("Error en demanar localització al client 2\n");
-                            exit(-1);
-                        }
-                    }
-
-                    if(missatgeResposta[2] != '0') {
-                        if(LUMIs_Resposta(sckUDP, missatgeResposta, longMissatge, IPrem, portUDPrem, fitxLog) == -1) {
-                            perror("Error enviar resposta\n");
-                            exit(-1);
-                        }
-                    }
-                //}
-            }
-            else if(tipus == 4) { // Resposta Localització (RL)
-                int i, longMissatge;
-                char missatgeResposta[150];
-
-                char IPresposta[16];
-                int portResposta;
-
-                char adrMI_1[100];
-                char nomUsuari_1[100];
-                char nomDomini_1[100];
-
-                longMissatge = sprintf(missatgeResposta, "RL%s", seq);
-
-                sscanf(seq+1, "%[^:]", adrMI_1);
-                sscanf(adrMI_1, "%[^@]@%s", nomUsuari_1, nomDomini_1);
-
-                if(strcmp(nomDomini, nomDomini_1) == 0) { // Si la petició venia d'un usuari d'aquest domini
-                    i = cercaUsuari(nomUsuari_1);
-
-                    strcpy(IPresposta, taula[i].adr_LUMI->ip);
-                    portResposta = taula[i].adr_LUMI->port;
-                }
-                else { // Si la peticio NO venia d'un usuari d'aquest domini, sinó d'un altre node
-                    DNSc_ResolDNSaIP(nomDomini_1, IPresposta);
-                    portResposta = DEFAULT_PORT;
-                }
-
-                LUMIs_Resposta(sckUDP, missatgeResposta, longMissatge, IPresposta, portResposta, fitxLog);
-            }
         }
         else{
 
@@ -292,7 +162,7 @@ void listUsers(){
     int i;
 
     for(i=0;i<N_USUARIS;i++){
-        if(!taula[i].adr_LUMI)printf("OFFILNE %s\n",taula[i].adr_MI);
+        if(!taula[i].adr_LUMI)printf("OFFLINE %s\n",taula[i].adr_MI);
         else printf("%s %s:%d\n",taula[i].adr_MI,taula[i].adr_LUMI->ip,taula[i].adr_LUMI->port);
     }
 }
@@ -315,7 +185,7 @@ void saveTableToFile(){
     FILE *fp;
     int i;
 
-    fp = fopen("./test.c", "w+");
+    fp = fopen("MIp2-nodelumi.cfg", "w+");
     
     fprintf(fp, "%s\n",nomDomini);
     for(i=0;i<N_USUARIS;i++)fprintf(fp, "%s\n",taula[i].adr_MI);
@@ -328,12 +198,16 @@ void removeUser(){
     printf("Enter user name to remove:");
     scanf("%s",nomUsuari);
 
-    int i = cercaUsuari(nomUsuari);
-    if(i == -1)printf("Error: User not found\n");
+    int pos = cercaUsuari(nomUsuari);
+    int i;
+    if(pos == -1)printf("Error: User not found\n");
     else{
         FILE *fp;
-        fp = fopen("./test.c", "w+");
-        for(i=i;i<N_USUARIS-1;i++){
+        fp = fopen("MIp2-nodelumi.cfg", "w+");
+        for(i=0;i<pos;i++){
+            fprintf(fp, "%s\n",taula[i].adr_MI);
+        }
+        for(i=pos;i<N_USUARIS-1;i++){
             taula[i] = taula[i+1];
             fprintf(fp, "%s\n",taula[i].adr_MI);
         }

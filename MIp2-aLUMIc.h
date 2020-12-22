@@ -32,7 +32,7 @@
 
 int estatus;
 
-int LUMIc_IniciaClient(char *nomUsuariDomini, int *fitxLog);
+int LUMIc_IniciaClient(const char *nomUsuariDomini, int *fitxLog);
 int LUMIc_DemanaRegistre(int sckNodeLUMI, const char *adrMI, int fitxLog);
 int LUMIc_DemanaDesregistre(int sckNodeLUMI, const char *adrMI, int fitxLog);
 int LUMIc_DemanaLocalitzacio(int sckNodeLUMI, const char *adrMIlocal, const char *adrMIremot, char *IPrem, int *portTCPremot, int fitxLog);

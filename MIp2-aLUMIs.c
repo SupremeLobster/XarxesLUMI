@@ -24,6 +24,7 @@
 #include "MIp2-aDNSc.h"
 #include "MIp2-aLUMIs.h"
 
+
 /* Definició de constants, p.e.,                                          */
 
 /* #define XYZ       1500                                                 */
@@ -45,6 +46,9 @@ int Log_TancaFitx(int FitxLog);
 /* Explcacio                                                              */
 int LUMIs_IniciaServidor(int *fitxLog) {
     int sckUDP;
+
+    nPeticionsIguals = 0;
+    SeqBytesAnterior[0] = '\0';
 
     if((sckUDP = UDP_CreaSock("0.0.0.0", DEFAULT_PORT)) == -1) {
         return -1;
@@ -82,13 +86,154 @@ int LUMIs_ServeixPeticio(int sckNodeLUMI, char *SeqBytes, int *LongSeqBytes, cha
     
     strcpy(SeqBytes, linea_rebuda+2);
 
-    int ret;
-    if( strcmp(tipus, "PR") == 0 ) ret = 1;
-    else if( strcmp(tipus, "PD") == 0 ) ret = 2;
-    else if( strcmp(tipus, "PL") == 0 ) ret = 3;
-    else if( strcmp(tipus, "RL") == 0 ) ret = 4;
+    int nTipus;
+    if( strcmp(tipus, "PR") == 0 ) nTipus = 1;
+    else if( strcmp(tipus, "PD") == 0 ) nTipus = 2;
+    else if( strcmp(tipus, "PL") == 0 ) nTipus = 3;
+    else if( strcmp(tipus, "RL") == 0 ) nTipus = 4;
 
-    return ret;
+    SeqBytes[*LongSeqBytes] = '\0'; // Convertim a string
+
+    // Es podria millorar guardant una taula que conti quantes peticions iguals s'han rebut des d'un origen concret (cada entrada de la taula tindria aquesta informació per un origen diferent)
+    // ---------------------------------
+    // | ORIGEN | MISSATGE | QUANTITAT |
+    // |--------|----------|-----------|
+    // |   MI   |  "PXxx"  |     3     |
+    // |--------|----------|-----------|
+    if(strcmp(SeqBytes, SeqBytesAnterior) == 0) nPeticionsIguals++;
+    else nPeticionsIguals = 0;
+    strcpy(SeqBytesAnterior, SeqBytes);
+
+    if(nTipus == 1) { // Peticio de registre (PR)
+        int i;
+        char missatge[3] = "RR0";
+
+        if((i = cercaUsuari(SeqBytes)) == -1) missatge[2] = '1'; // Usuari no existeix
+
+        if(LUMIs_Resposta(sckNodeLUMI, missatge, 3, IPrem, *portUDPrem, fitxLog) == -1) {
+            perror("Error enviar resposta\n");
+            exit(-1);
+        }
+
+        if(i != -1) { // Només fem això si l'usuari SÍ existeix
+            if(taula[i].adr_LUMI == NULL) taula[i].adr_LUMI = malloc(sizeof(struct pair_address)); // Reservem memoria
+
+            strcpy(taula[i].adr_LUMI->ip, IPrem); // Assignem valor a IP
+            taula[i].adr_LUMI->port = *portUDPrem; // Assignem valor a PORT
+
+            //printf("@MI: %s     @sckLUMI: %s:%d\n", taula[i].adr_MI, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port);
+        }
+    }
+    else if(nTipus == 2) { // Peticio de desregistre (PD)
+        int i;
+        char missatge[3] = "RD0";
+
+        if((i = cercaUsuari(SeqBytes)) == -1) missatge[2] = '1'; // Usuari no existeix
+
+        if(LUMIs_Resposta(sckNodeLUMI, missatge, 3, IPrem, *portUDPrem, fitxLog) == -1) {
+            perror("Error enviar resposta\n");
+            exit(-1);
+        }
+
+        if(i != -1) { // Només fem això si l'usuari SÍ existeix
+            free(taula[i].adr_LUMI); // Alliberem memoria
+            taula[i].adr_LUMI = NULL; // El posem a offline
+        }
+    }
+    else if(nTipus == 3) { // Peticio de localització (PL)
+        int i, longMissatge;
+        char missatgeResposta[150];
+
+        char adrMI_1[100];
+        char nomUsuari_1[100];
+        char nomDomini_1[100];
+
+        char adrMI_2[100];
+        char nomUsuari_2[100];
+        char nomDomini_2[100];
+
+        sscanf(SeqBytes, "%[^:]:%s", adrMI_1, adrMI_2);
+        sscanf(adrMI_1, "%[^@]@%s", nomUsuari_1, nomDomini_1);
+        sscanf(adrMI_2, "%[^@]@%s", nomUsuari_2, nomDomini_2);
+
+        longMissatge = sprintf(missatgeResposta, "RL0%s:%s", adrMI_1, adrMI_2);
+
+        if( strcmp(nomDomini, nomDomini_2) == 0 ) { // Si la peticio es per a un usuari d'aquest domini
+            if((i = cercaUsuari(nomUsuari_2)) == -1) { // Usuari no existeix
+                missatgeResposta[2] = '2';
+            }
+            else { // Només fem això si l'usuari SÍ existeix
+                if(taula[i].adr_LUMI != NULL) { // Si l'usuari està marcat com a "online"
+                    if(nPeticionsIguals < MAX_ATTEMPTS-1) {
+                        if(LUMIs_DemanaLocalitzacio(sckNodeLUMI, taula[i].adr_LUMI->ip, taula[i].adr_LUMI->port, adrMI_1, adrMI_2, fitxLog) == -1) {
+                            perror("Error en demanar localització al client 2\n");
+                            exit(-1);
+                        }
+                    }
+                    else {
+                        missatgeResposta[2] = '3'; // Assumim que l'usuari està "offline" i fem el desregistre
+                        free(taula[i].adr_LUMI); // Alliberem memoria
+                        taula[i].adr_LUMI = NULL; // El posem a offline
+                    }
+                }
+                else {  // Si l'usuari està marcat com a "offline"
+                    missatgeResposta[2] = '3';
+                }
+            }
+        }
+        else { // Si la peticio NO es per un usuari d'aquest domini
+            char IP_d2[16];
+            int portPeticio;
+
+            portPeticio = DEFAULT_PORT;
+
+            if(DNSc_ResolDNSaIP(nomDomini_2, IP_d2) == -1) {
+                missatgeResposta[2] = '2';
+            }
+            else if(LUMIs_DemanaLocalitzacio(sckNodeLUMI, IP_d2, portPeticio, adrMI_1, adrMI_2, fitxLog) == -1) {
+                perror("Error en demanar localització al client 2\n");
+                exit(-1);
+            }
+        }
+
+        if(missatgeResposta[2] != '0') {
+            if(LUMIs_Resposta(sckNodeLUMI, missatgeResposta, longMissatge, IPrem, *portUDPrem, fitxLog) == -1) {
+                perror("Error enviar resposta\n");
+                exit(-1);
+            }
+        }
+    }
+    else if(nTipus == 4) { // Resposta Localització (RL)
+        int i, longMissatge;
+        char missatgeResposta[150];
+
+        char IPresposta[16];
+        int portResposta;
+
+        char adrMI_1[100];
+        char nomUsuari_1[100];
+        char nomDomini_1[100];
+
+        longMissatge = sprintf(missatgeResposta, "RL%s", SeqBytes);
+
+        sscanf(SeqBytes+1, "%[^:]", adrMI_1);
+        sscanf(adrMI_1, "%[^@]@%s", nomUsuari_1, nomDomini_1);
+
+        if(strcmp(nomDomini, nomDomini_1) == 0) { // Si la petició venia d'un usuari d'aquest domini
+            i = cercaUsuari(nomUsuari_1);
+
+            strcpy(IPresposta, taula[i].adr_LUMI->ip);
+            portResposta = taula[i].adr_LUMI->port;
+        }
+        else { // Si la peticio NO venia d'un usuari d'aquest domini, sinó d'un altre node
+            DNSc_ResolDNSaIP(nomDomini_1, IPresposta);
+            portResposta = DEFAULT_PORT;
+        }
+
+        LUMIs_Resposta(sckNodeLUMI, missatgeResposta, longMissatge, IPresposta, portResposta, fitxLog);
+    }
+
+    return nTipus;
 }
 
 int LUMIs_Resposta(int sckNodeLUMI, const char *resposta, int longResposta, const char *IPrem, int portUDPrem, int fitxLog) {
